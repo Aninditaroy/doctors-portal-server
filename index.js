@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 const { MongoClient, ServerApiVersion } = require('mongodb');
 
@@ -14,6 +15,7 @@ app.use(express.json());
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.r7ght.mongodb.net/?retryWrites=true&w=majority`;
 
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
+
 
 async function run() {
     try {
@@ -40,7 +42,8 @@ async function run() {
                 $set: user,
             };
             const result = await userCollection.updateOne(filter, updateDoc, options);
-            res.send({ result });
+            const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
+            res.send({ result, token });
         })
 
         // aggregate
@@ -77,6 +80,8 @@ async function run() {
 
         app.get('/booking', async (req, res) => {
             const patient = req.query.patient;
+            const authorization = req.headers.authorization;
+            console.log('auth header', authorization);
             const query = { patient: patient };
             const bookings = await bookingCollection.find(query).toArray();
             res.send(bookings);
