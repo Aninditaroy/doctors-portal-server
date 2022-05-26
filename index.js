@@ -231,7 +231,7 @@ async function run() {
             }
             const result = bookingCollection.insertOne(booking);
             console.log('sending email');
-            sendAppointmentEmail(booking);
+            // sendAppointmentEmail(booking);
             return res.send({ success: true, result });
         });
 
