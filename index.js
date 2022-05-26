@@ -30,6 +30,69 @@ function verifyJWT(req, res, next) {
         next();
     })
 }
+function sendAppointmentEmail(booking) {
+    const { patient, patientName, treatment, date, slot } = booking;
+
+    var email = {
+        from: process.env.EMAIL_SENDER,
+        to: patient,
+        subject: `Your Appointment for ${treatment} is on ${date} at ${slot} is Confirmed`,
+        text: `Your Appointment for ${treatment} is on ${date} at ${slot} is Confirmed`,
+        html: `
+     <div>
+        <p> Hello ${patientName}, </p>
+         <h3>Your Appointment for ${treatment} is confirmed</h3>
+        <p>Looking forward to seeing you on ${date} at ${slot}.</p>
+        <h3>Our Address</h3>
+        <p>Zindabazar Sylhet</p>
+        <p>Bangladesh</p>
+        <a href="https://google.com/">unsubscribe</a>
+      </div>
+    `
+    };
+
+    emailClient.sendMail(email, function (err, info) {
+        if (err) {
+            console.log(err);
+        }
+        else {
+            console.log('Message sent: ', info);
+        }
+    });
+
+}
+function sendPaymentConfirmationEmail(booking) {
+    const { patient, patientName, treatment, date, slot } = booking;
+
+    var email = {
+        from: process.env.EMAIL_SENDER,
+        to: patient,
+        subject: `We have received your payment for ${treatment} is on ${date} at ${slot} is Confirmed`,
+        text: `Your payment for this Appointment ${treatment} is on ${date} at ${slot} is Confirmed`,
+        html: `
+      <div>
+        <p> Hello ${patientName}, </p>
+        <h3>Thank you for your payment . </h3>
+        <h3>We have received your payment</h3>
+        <p>Looking forward to seeing you on ${date} at ${slot}.</p>
+        <h3>Our Address</h3>
+        <p>Zindabazar Sylhet</p>
+        <p>Bangladesh</p>
+        <a href="https://google.com/">unsubscribe</a>
+      </div>
+    `
+    };
+
+    emailClient.sendMail(email, function (err, info) {
+        if (err) {
+            console.log(err);
+        }
+        else {
+            console.log('Message sent: ', info);
+        }
+    });
+
+}
 
 async function run() {
     try {
@@ -167,9 +230,25 @@ async function run() {
                 return res.send({ success: false, booking: exists });
             }
             const result = bookingCollection.insertOne(booking);
+            console.log('sending email');
+            sendAppointmentEmail(booking);
             return res.send({ success: true, result });
         });
 
+        app.patch('/booking/:id', verifyJWT, async (req, res) => {
+            const id = req.params.id;
+            const payment = req.body;
+            const filter = { _id: ObjectId(id) };
+            const updatedDoc = {
+                $set: {
+                    paid: true,
+                    transactionId: payment.transactionId
+                }
+            }
+            const result = await paymentCollection.insertOne(payment);
+            const updatedBooking = await bookingCollection.updateOne(filter, updatedDoc);
+            res.send(updatedDoc);
+        })
 
 
         app.get('/doctor', verifyJWT, verifyAdmin, async (req, res) => {
